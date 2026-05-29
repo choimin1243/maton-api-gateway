@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maton API Gateway"
+  short_description: "Call Maton-managed third-party API routes safely."
+  default_prompt: "Use $maton-api-gateway to inspect my connected services and make safe API calls through Maton."
