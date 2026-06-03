@@ -62,9 +62,32 @@ GET /google-mail/gmail/v1/users/me/messages
 
 ## Google Sheets Notes
 
-Prefer `spreadsheets:batchUpdate` with `updateCells`, `repeatCell`, `mergeCells`, `updateDimensionProperties`, and `updateBorders` for sheet creation and formatting. This avoids path encoding problems with Korean sheet names and range strings.
+### Fast path: use sheets_design.py
 
-Avoid the `values/{range}?valueInputOption=...` path through Maton when the range contains Korean, spaces, or quoted sheet names. In practice, the gateway may interpret part of the range/query as an unexpected JSON field. Use `batchUpdate` with numeric `sheetId` ranges instead.
+Never write raw batchUpdate JSON for sheet creation. Use the bundled helper instead:
+
+```bash
+# 1. Write data.json  (UTF-8, see SKILL.md for full schema)
+# 2. Generate batchUpdate body \u2014 all formatting in one shot
+python scripts/sheets_design.py --data data.json --output body.json --theme blue
+# 3. Apply
+python scripts/maton_api.py POST /google-sheets/v4/spreadsheets/ID:batchUpdate \
+  --connection CONN_ID --json-file body.json
+```
+
+`sheets_design.py` produces a single `batchUpdate` request that covers:
+- Title band (merged, large bold, theme color)
+- Header row (white text on accent background, centered)
+- Alternating stripe rows
+- Outer thick border + inner thin grid
+- Column widths and row heights
+- Frozen header rows
+
+### Raw API guidance (when needed)
+
+Prefer `spreadsheets:batchUpdate` with `updateCells`, `mergeCells`, `updateDimensionProperties`, and `updateBorders`. This avoids path encoding problems with Korean sheet names and range strings.
+
+Avoid the `values/{range}?valueInputOption=...` path through Maton when the range contains Korean, spaces, or quoted sheet names. Use `batchUpdate` with numeric `sheetId` ranges instead.
 
 When running from PowerShell, do not place Korean literals directly inside `@' ... '@ | python -` scripts. PowerShell may pass them to Python as `???` depending on console encoding. Use one of these safer patterns:
 
